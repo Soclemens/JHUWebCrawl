@@ -4,7 +4,8 @@ class AdaptiveModel:
     def __init__(self):
         # Define model architecture for adaptive learning
         self.model = tf.keras.models.Sequential([
-            tf.keras.layers.Dense(64, activation='relu', input_shape=(10,)),  # Adjust input shape
+            tf.keras.Input(shape=(10,)),  # Specify input shape here
+            tf.keras.layers.Dense(64, activation='relu'),
             tf.keras.layers.Dense(32, activation='relu'),
             tf.keras.layers.Dense(1, activation='sigmoid')
         ])

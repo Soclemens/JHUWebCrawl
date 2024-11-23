@@ -1,0 +1,9 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jhucrawler"
+version = "0.1"
+description = "A scalable, adaptive web crawler"
+dependencies = ["tensorflow", "scikit-learn", "beautifulsoup4", "requests"]
