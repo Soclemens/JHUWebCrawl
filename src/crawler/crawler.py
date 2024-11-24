@@ -37,9 +37,19 @@ class WebCrawler:
             link_text = link.get_text(strip=True)
 
 
-            # Get the surrounding text
-            preceding_text = link.find_previous(string=True)
-            following_text = link.find_next(string=True).find_next(string=True)
+            # Get the surrounding text. Try and excepts to capture nothing being behind or in front of <a> tag
+            try:
+                preceding_text = link.find_previous(string=True)
+            except AttributeError:
+                preceding_text = ""
+            try:
+                following_text = link.find_next(string=True).find_next(string=True)
+            except AttributeError:
+                try:
+                    following_text = link.find_next(string=True)
+                except AttributeError:
+                    following_text = ""
+
 
             # Merge the context and split into words
             context = (
@@ -60,8 +70,13 @@ class WebCrawler:
 
     def crawl(self, url, depth=0):
         """Crawl a single URL."""
-        if depth > self.max_depth or url in self.visited:
+        # Base Cases
+        if depth > self.max_depth:
+            print(f"\t{url} skipped, at max depth")
             return
+        if url in self.visited:
+            print(f"\t{url} skipped, already visited")
+
         print(f"Crawling: {url} (Depth: {depth})")
         self.visited.add(url)
 
@@ -71,6 +86,8 @@ class WebCrawler:
             return
 
         # Todo: Need to store the HTML value somewhere so the web crawler is actually doing something
+        with open("myfile.txt", "a") as file:
+            file.write(f"{url}\n")
 
         # Get the links in the web page
         links = self.parse_links(html, url, 20)
@@ -101,6 +118,6 @@ class WebCrawler:
 # Example usage
 if __name__ == "__main__":
     seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler"]
-    target_word = "crawler"
-    crawler = WebCrawler(seed_urls, target_word, max_depth=2, max_horizon=3)
+    target_word = "baseball"
+    crawler = WebCrawler(seed_urls, target_word, max_depth=4, max_horizon=20)
     crawler.start()
