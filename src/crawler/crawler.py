@@ -13,7 +13,7 @@ class WebCrawler:
         self.frontier = seed_urls  # List of URLs to crawl
         self.visited = set()  # Keep track of visited URLs
         self.max_depth = max_depth
-        self.user_agent = user_agent
+        # self.user_agent = user_agent
         self.robots_handler = RobotsHandler()
 
     def fetch_page(self, url) -> None:
