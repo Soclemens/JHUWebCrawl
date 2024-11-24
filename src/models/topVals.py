@@ -11,6 +11,9 @@ class TopValues:
         self.heap = []
 
     def add(self, value):
+        if value[0] in [t[1] for t in self.heap]:  # prevents us from adding the same value to the heap twice
+            return
+
         if len(self.heap) < self.capacity:
             heapq.heappush(self.heap, (value[1], value[0]))
         else:
@@ -38,3 +41,4 @@ class TopValues:
             to_return = heapq.nlargest(1, self.heap).pop()
             self.remove_from_heap(to_return)   
         return to_return
+    

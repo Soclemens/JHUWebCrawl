@@ -109,8 +109,8 @@ class WebCrawler:
             horizon.add((a_url, url_average))
         
         while len(horizon.get_top_values()) > 0:  # If we can multiprocess this step we can visit more URLs faster 
-            next_url = horizon.pop_highest()[1]
-            print(f"Next target: {next_url} - referred by {url}")  # print statement here is doing dull duty to make sure we dont get stuck in infinite loop
+            score, next_url = horizon.pop_highest()
+            print(f"{score} Next target: {next_url} - referred by {url}")  # print statement here is doing dull duty to make sure we dont get stuck in infinite loop
             self.crawl(next_url, depth + 1)
 
     def start(self):
