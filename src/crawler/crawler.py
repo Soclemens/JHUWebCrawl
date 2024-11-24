@@ -1,20 +1,20 @@
 from models.similarities import calculate_similarities, clean_words
-from crawler.robots import RobotsHandler
 import requests
 from bs4 import BeautifulSoup
 from models.topVals import TopValues
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from multiprocessing import Pool
+# from crawler.robots import RobotsHandler
 
 class WebCrawler:
-    def __init__(self, seed_urls, word, max_depth=2, max_horizon=100):
+    def __init__(self, seed_urls, word, max_depth=2, max_horizon=100, user_agent="MyCrawler"):
         self.target_word = word
         self.max_horizon = max_horizon
         self.frontier = seed_urls  # List of URLs to crawl
         self.visited = set()  # Keep track of visited URLs
         self.max_depth = max_depth
-        # self.user_agent = user_agent
-        self.robots_handler = RobotsHandler()
+        self.user_agent = user_agent
+        # self.robots_handler = RobotsHandler()
 
     def fetch_page(self, url) -> None:
         """Fetch the HTML content of a page."""
@@ -62,18 +62,10 @@ class WebCrawler:
         """Crawl a single URL."""
         if depth > self.max_depth or url in self.visited:
             return
-
-        # Parse the domain and check robots.txt
-        parsed_url = urlparse(url)
-        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        if not self.robots_handler.can_fetch(base_url, self.user_agent, url):
-            print(f"Blocked by robots.txt: {url}")
-            return
-
         print(f"Crawling: {url} (Depth: {depth})")
         self.visited.add(url)
 
-        # Fetch and process the page
+        # Fetch the page content
         html = self.fetch_page(url)
         if not html:
             return
