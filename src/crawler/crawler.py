@@ -1,4 +1,5 @@
 from models.similarities import calculate_similarities, clean_words
+from crawler.robots import RobotsHandler
 import requests
 from bs4 import BeautifulSoup
 from models.topVals import TopValues
@@ -12,11 +13,13 @@ class WebCrawler:
         self.frontier = seed_urls  # List of URLs to crawl
         self.visited = set()  # Keep track of visited URLs
         self.max_depth = max_depth
+        self.user_agent = user_agent
+        self.robots_handler = RobotsHandler()
 
     def fetch_page(self, url) -> None:
         """Fetch the HTML content of a page."""
         try:
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, headers={"User-Agent": self.user_agent}, timeout=10)
             if response.status_code == 200:
                 return response.text
         except requests.RequestException as e:
@@ -59,10 +62,18 @@ class WebCrawler:
         """Crawl a single URL."""
         if depth > self.max_depth or url in self.visited:
             return
+
+        # Parse the domain and check robots.txt
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        if not self.robots_handler.can_fetch(base_url, self.user_agent, url):
+            print(f"Blocked by robots.txt: {url}")
+            return
+
         print(f"Crawling: {url} (Depth: {depth})")
         self.visited.add(url)
 
-        # Fetch the page content
+        # Fetch and process the page
         html = self.fetch_page(url)
         if not html:
             return
