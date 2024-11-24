@@ -1,1 +1,32 @@
 https://en.wikipedia.org/wiki/Web_crawler
+https://en.wikipedia.org/wiki/Web_crawler
+	https://en.wikipedia.org/wiki/Web_crawler#List_of_web_crawlers
+		https://en.wikipedia.org/wiki/DuckDuckGo
+			https://en.wikipedia.org/wiki/VentureBeat
+				https://en.wikipedia.org/wiki/Help:Contents
+					https://en.wikipedia.org/wiki/Help:Searching#Custom_search_boxes
+					https://en.wikipedia.org/wiki/Wikipedia:Shortcut
+					https://en.wikipedia.org/wiki/Help:Menu/Navigating_Wikipedia
+					https://en.wikipedia.org/wiki/Help:Menu
+					https://en.wikipedia.org/wiki/Wikipedia:IRC_help_disclaimer
+				https://en.wikipedia.org/wiki/Help:Maintenance_template_removal
+					https://en.wikipedia.org/wiki/Template:POV_check
+					https://en.wikipedia.org/wiki/Help:Maintenance_template_removal#When_not_to_remove
+					https://en.wikipedia.org/wiki/Wikipedia:Deletion_policy
+					https://en.wikipedia.org/wiki/Help:Using_talk_pages
+					https://en.wikipedia.org/wiki/Help:Maintenance_template_removal#Addressing_the_flagged_problem
+				https://en.wikipedia.org/wiki/Help:Maintenance_template_removal
+					https://en.wikipedia.org/w/index.php?title=Help:Maintenance_template_removal&action=edit
+					https://en.wikipedia.org/wiki/Wikipedia:Link_rot
+					https://en.wikipedia.org/wiki/Help:Introduction
+					https://en.wikipedia.org/wiki/Special:RecentChangesLinked/Help:Maintenance_template_removal
+					https://en.wikipedia.org/wiki/Help:Introduction_to_referencing/1
+				https://en.wikipedia.org/wiki/Help:Maintenance_template_removal
+					https://en.wikipedia.org/wiki/Wikipedia:STUB
+					https://en.wikipedia.org/w/index.php?title=Help:Maintenance_template_removal&oldid=1248395764
+					https://en.wikipedia.org/wiki/Wikipedia:Bare_URLs
+					https://en.wikipedia.org/wiki/Wikipedia:External_links
+					https://en.wikipedia.org/wiki/Help_talk:Maintenance_template_removal##
+				https://en.wikipedia.org/wiki/Help:Maintenance_template_removal
+https://en.wikipedia.org/wiki/Web_crawler
+	https://en.wikipedia.org/wiki/Web_crawler#List_of_web_crawlers
