@@ -6,4 +6,4 @@ build-backend = "setuptools.build_meta"
 name = "jhucrawler"
 version = "0.1"
 description = "A scalable, adaptive web crawler"
-dependencies = ["tensorflow", "scikit-learn", "beautifulsoup4", "requests"]
+dependencies = ["tensorflow", "scikit-learn", "beautifulsoup4", "requests", "spacy", "spacy-cleaner"]
