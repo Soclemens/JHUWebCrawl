@@ -86,8 +86,12 @@ class WebCrawler:
             return
 
         # Todo: Need to store the HTML value somewhere so the web crawler is actually doing something
+        aChar = "\t"
         with open("myfile.txt", "a") as file:
-            file.write(f"{url}\n")
+            file.write(f"{aChar * depth}{url}\n")
+
+        if depth + 1 > self.max_depth:  # Avoid making calculations for depths were never going to visit
+            return
 
         # Get the links in the web page
         links = self.parse_links(html, url, 20)
@@ -118,6 +122,6 @@ class WebCrawler:
 # Example usage
 if __name__ == "__main__":
     seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler"]
-    target_word = "baseball"
-    crawler = WebCrawler(seed_urls, target_word, max_depth=4, max_horizon=20)
+    target_word = "crawler"
+    crawler = WebCrawler(seed_urls, target_word, max_depth=5, max_horizon=5)
     crawler.start()
