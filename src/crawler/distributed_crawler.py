@@ -4,7 +4,6 @@ import sys
 import time
 from subprocess import Popen
 from celery import Celery, group
-from celery import revoke
 from src.models.similarities import calculate_similarities, clean_words
 from src.models.topVals import TopValues
 from urllib.parse import urljoin, urlparse
@@ -16,7 +15,7 @@ import logging
 
 # Configure Celery with RabbitMQ as broker and SQLite as backend
 app = Celery(
-    "crawler",
+    "distributed_crawler",
     broker="pyamqp://guest@localhost//",
     backend="db+sqlite:///results.sqlite3"
 )
@@ -227,7 +226,7 @@ def start_celery_worker(seed_url, concurrency=5):
     command = [
         sys.executable,
         "-m", "celery",
-        "-A", "src.crawler.crawler",
+        "-A", "src.crawler.distributed_crawler",
         "worker",
         "--pool=threads",
         f"--concurrency={concurrency}",
@@ -246,7 +245,7 @@ def terminate_all_tasks():
                 for task in tasks:
                     task_id = task['id']
                     logging.info(f"Revoking task {task_id} on worker {worker}")
-                    revoke(task_id, terminate=True)
+                    app.control.revoke(task_id, terminate=True)
         logging.info("All active tasks have been terminated.")
     except Exception as e:
         logging.error(f"Error during task termination: {e}")

@@ -3,12 +3,7 @@ from spacy.util import is_package
 from spacy_cleaner import processing, Cleaner
 
 def get_spacy_model(model_name="en_core_web_md"):
-    """
-    Ensure the SpaCy model is installed and return the loaded model.
-    If the model is not installed, it is downloaded and installed.
-    """
     try:
-        # Check if the model is already installed
         if not is_package(model_name):
             print(f"Model '{model_name}' not found. Downloading...")
             from spacy.cli import download
@@ -19,10 +14,11 @@ def get_spacy_model(model_name="en_core_web_md"):
         raise
 
 def clean_words(group):
-    '''
-    Function used to clean surrounding words of URL
-    '''
-    nlp = get_spacy_model('en_core_web_md')  # Automatically ensure the model is installed
+    if not group or not isinstance(group, list):
+        print("Invalid input to clean_words: Expected a list of tuples.")
+        return []
+
+    nlp = get_spacy_model('en_core_web_md')
 
     cleaner = Cleaner(
         nlp,
@@ -34,36 +30,37 @@ def clean_words(group):
         processing.mutate_lemma_token,
     )
 
-    words = cleaner.clean([t[1] for t in group])  # Clean all of the surrounding words
+    try:
+        words = cleaner.clean([t[1] for t in group if len(t) > 1])
+    except Exception as e:
+        print(f"Error during cleaning words: {e}")
+        return []
+
     result = []
-    for i, (first, _) in enumerate(group):  # Put the words back in with their original URLs
-        result.append((first, words[i]))
+    for i, (first, _) in enumerate(group):
+        if i < len(words):
+            result.append((first, words[i]))
+        else:
+            print(f"Skipping tuple with missing text: {group[i]}")
+
     return result
 
 def calculate_similarities(words, base_word):
-    '''
-    Function that takes in a target word and string and returns the 
-    similarity score for each token in the string
+    if not words or len(words) < 2:
+        print(f"Invalid input to calculate_similarities: {words}")
+        return words[0] if words else None, []
 
-    # Example usage
-    base_word = "king"
-    words = "Apple is looking at buying U.K. startup for $1 billion"
-    similarities = calculate_similarities(base_word, words)
+    try:
+        nlp = get_spacy_model('en_core_web_md')
+        base_token = nlp(base_word)
+        doc = nlp(words[1])
 
-    print(f"Similarities to '{base_word}':")
-    for word, score in similarities.items():
-        print(f"{word}: {score:.2f}")
-    '''
-    # Spacy stuff
-    nlp = get_spacy_model('en_core_web_md')  # Automatically ensure the model is installed
+        to_return = []
+        for token in doc:
+            if token and token.vector_norm:
+                to_return.append(base_token.similarity(token))
 
-    # Calculate similarities
-    base_token = nlp(base_word)
-    doc = nlp(words[1])
-
-    to_return = []
-    for token in doc:
-        if token and token.vector_norm:  # Checks to make sure all of the tokens can be handled
-            to_return.append(base_token.similarity(token))
-
-    return words[0], to_return
+        return words[0], to_return
+    except Exception as e:
+        print(f"Error in calculate_similarities for {words}: {e}")
+        return words[0], []
