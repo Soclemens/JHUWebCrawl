@@ -91,7 +91,7 @@ class WebCrawler:
                 except AttributeError:
                     preceding_text = ""
                 try:
-                    following_text = link.find_next(string=True)
+                    following_text = link.find_next(string=True).find_next(string=True)
                 except AttributeError:
                     following_text = ""
 
