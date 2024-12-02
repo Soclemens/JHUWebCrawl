@@ -4,6 +4,7 @@ import os
 def dump_all_tables_with_count(database_path):
     """
     Connect to the SQLite database and dump all rows from all tables, including row counts.
+    Excludes 'context_snippet' column for the 'CrawlResults' table.
     :param database_path: Path to the SQLite database file.
     """
     if not os.path.exists(database_path):
@@ -33,12 +34,22 @@ def dump_all_tables_with_count(database_path):
             row_count = cursor.fetchone()[0]
             print(f"Row Count: {row_count}")
 
-            # Query to fetch all rows from the table
-            cursor.execute(f"SELECT * FROM {table_name}")
-            rows = cursor.fetchall()
+            if table_name == "CrawlResults":
+                # Exclude 'context_snippet' column for 'CrawlResults'
+                cursor.execute("PRAGMA table_info(CrawlResults)")
+                columns_info = cursor.fetchall()
+                column_names = [col[1] for col in columns_info if col[1] != "context_snippet"]
 
-            # Fetch column headers
-            column_names = [description[0] for description in cursor.description]
+                # Query to fetch all rows excluding 'context_snippet'
+                columns_to_select = ", ".join(column_names)
+                cursor.execute(f"SELECT {columns_to_select} FROM {table_name}")
+            else:
+                # Query to fetch all rows from the table
+                cursor.execute(f"SELECT * FROM {table_name}")
+                column_names = [description[0] for description in cursor.description]
+
+            # Fetch rows and print results
+            rows = cursor.fetchall()
             print(f"Columns: {', '.join(column_names)}")
 
             # Print each row

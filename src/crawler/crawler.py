@@ -2,10 +2,11 @@ import csv
 import os
 import sys
 import time
+import sqlite3
 from subprocess import Popen
 from celery import Celery, group
-from models.similarities import calculate_similarities, clean_words, clean_html
-from models.topVals import TopValues
+from src.models.similarities import calculate_similarities, clean_words, clean_html
+from src.models.topVals import TopValues
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
@@ -27,6 +28,29 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
+
+# SQLite Database Setup
+def initialize_database():
+    conn = sqlite3.connect("results.sqlite3")
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS CrawlResults (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        url TEXT NOT NULL,
+                        depth INTEGER NOT NULL,
+                        links_found INTEGER NOT NULL,
+                        relevance_score REAL NOT NULL,
+                        context_snippet TEXT NOT NULL
+                      )''')
+    conn.commit()
+    conn.close()
+
+def insert_crawl_result(url, depth, links_found, relevance_score, context_snippet):
+    conn = sqlite3.connect("results.sqlite3")
+    cursor = conn.cursor()
+    cursor.execute('''INSERT INTO CrawlResults (url, depth, links_found, relevance_score, context_snippet)
+                      VALUES (?, ?, ?, ?, ?)''', (url, depth, links_found, relevance_score, context_snippet))
+    conn.commit()
+    conn.close()
 
 def purge_backend_and_queue():
     """Purge Celery queue and backend."""
@@ -162,7 +186,10 @@ class WebCrawler:
             "relevance_score": round(relevance_score, 4),
             "context_snippet": "; ".join(snippet for _, snippet in cleaned_links)
         }
-        self.crawled_data.append(entry)
+
+        insert_crawl_result(url, depth, len(cleaned_links), round(relevance_score,4), "; ".join(snippet for _, snippet in cleaned_links))
+        
+        #self.crawled_data.append(entry)
         self.log_progress(url, depth, log_file)
 
         if depth + 1 > self.max_depth:  # Avoid making calculations for depths were never going to visit
@@ -209,25 +236,20 @@ def celery_crawl_url(seed_url, target_word, max_depth=2, max_horizon=100, log_fi
 
 
 @app.task(name="crawler.generate_report")
-def generate_csv_report(data, filename="crawled_report.csv"):
-    """Generate a CSV report from the crawled data."""
-    if not isinstance(data, list):
-        raise ValueError("Data must be a list of lists for CSV generation.")
-
-    # Combine data from all tasks
-    consolidated_data = []
-    for task_result in data:
-        if isinstance(task_result, list):
-            consolidated_data.extend(task_result)
-        else:
-            logging.error(f"Invalid data type in task result: {type(task_result)}")
+def generate_csv_report(filename="crawled_report.csv"):
+    """Generate a CSV report from the SQLite database."""
+    conn = sqlite3.connect("results.sqlite3")
+    cursor = conn.cursor()
+    cursor.execute('''SELECT url, depth, links_found, relevance_score, context_snippet FROM CrawlResults''')
+    rows = cursor.fetchall()
+    conn.close()
 
     with open(filename, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=["url", "depth", "links_found", "relevance_score", "context_snippet"])
-        writer.writeheader()
-        writer.writerows(consolidated_data)
-    logging.info(f"Report saved to {filename}")
+        writer = csv.writer(file)
+        writer.writerow(["URL", "Depth", "Links Found", "Relevance Score", "Context Snippet"])
+        writer.writerows(rows)
 
+    logging.info(f"Report saved to {filename}")
 
 def start_celery_worker(seed_url, concurrency=5):
     """Start a Celery worker for a specific seed URL."""
@@ -278,6 +300,8 @@ if __name__ == "__main__":
     # Purge Celery queue and backend before starting
     purge_backend_and_queue()
 
+    initialize_database()
+
     workers = []
     try:
         for seed_url in seed_urls:
@@ -290,9 +314,8 @@ if __name__ == "__main__":
             celery_crawl_url.s(seed_url, target_word, max_depth=max_depth, max_horizon=max_horizon, log_file=log_file)
             for seed_url in seed_urls
         )
-        result = (crawl_tasks | generate_csv_report.s()).apply_async()
         logging.info("Tasks for crawling have been enqueued.")
-        result.get()  # Wait for the results
+        crawl_tasks.apply_async().get()
 
     except KeyboardInterrupt:
         logging.info("Keyboard interrupt detected! Stopping workers and tasks...")
@@ -307,3 +330,5 @@ if __name__ == "__main__":
         terminate_all_tasks()
 
         logging.info("Crawling process complete.")
+
+        generate_csv_report()
