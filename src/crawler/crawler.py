@@ -5,7 +5,7 @@ import sys
 import time
 import sqlite3
 from subprocess import Popen
-from celery import Celery, group
+from celery import Celery, group, signals
 from src.models.similarities import calculate_similarities, clean_words, clean_html
 from src.models.topVals import TopValues
 from urllib.parse import urljoin, urlparse
@@ -29,6 +29,14 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
+# Worker-specific start time
+WORKER_START_TIME = None
+
+@signals.worker_init.connect
+def set_worker_start_time(**kwargs):
+    global WORKER_START_TIME
+    WORKER_START_TIME = time.time()
+    logging.info(f"Worker initialized at {WORKER_START_TIME}")
 
 # SQLite Database Setup
 def initialize_database():
@@ -41,17 +49,19 @@ def initialize_database():
                         links_found INTEGER NOT NULL,
                         relevance_score REAL NOT NULL,
                         context_snippet TEXT NOT NULL,
-                        duration_sec REAL NOT NULL
+                        duration_sec REAL NOT NULL,
+                        total_duration_sec REAL NOT NULL
                       )''')
     conn.commit()
     conn.close()
 
 
-def insert_crawl_result(url, depth, links_found, relevance_score, context_snippet, duration_sec):
+def insert_crawl_result(url, depth, links_found, relevance_score, context_snippet, duration_sec, total_duration_sec):
     conn = sqlite3.connect("results.sqlite3")
     cursor = conn.cursor()
-    cursor.execute('''INSERT INTO CrawlResults (url, depth, links_found, relevance_score, context_snippet, duration_sec)
-                      VALUES (?, ?, ?, ?, ?, ?)''', (url, depth, links_found, relevance_score, context_snippet, duration_sec))
+    cursor.execute('''INSERT INTO CrawlResults (url, depth, links_found, relevance_score, context_snippet, duration_sec, total_duration_sec)
+                      VALUES (?, ?, ?, ?, ?, ?, ?)''', 
+                      (url, depth, links_found, relevance_score, context_snippet, duration_sec, total_duration_sec))
     conn.commit()
     conn.close()
 
@@ -162,6 +172,7 @@ class WebCrawler:
 
     def crawl(self, url, depth=0, log_file="myfile.txt"):
         """Recursively crawl a URL to the specified depth."""
+        global WORKER_START_TIME
         start_time = time.time() 
 
         if depth > self.max_depth or url in self.visited:
@@ -186,7 +197,8 @@ class WebCrawler:
 
         # Save the crawl results
         duration_sec = time.time() - start_time
-        insert_crawl_result(url, depth, len(cleaned_links), round(relevance_score,4), "; ".join(snippet for _, snippet in cleaned_links), duration_sec)
+        total_duration_sec = time.time() - WORKER_START_TIME if WORKER_START_TIME else duration_sec
+        insert_crawl_result(url, depth, len(cleaned_links), round(relevance_score,4), "; ".join(snippet for _, snippet in cleaned_links), duration_sec, total_duration_sec)
         
         #self.crawled_data.append(entry)
         self.log_progress(url, depth, log_file)
