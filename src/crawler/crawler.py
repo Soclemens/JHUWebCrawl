@@ -121,13 +121,13 @@ class WebCrawler:
         """Calculate relevance of page content to a keyword."""
         return content.lower().count(keyword.lower()) / max(len(content.split()), 1)
 
-    def log_progress(self, url, depth, filename="crawling_progress.txt"):
+    def log_progress(self, url, depth, filename="myfile.txt"):
         """Write progress updates to a hierarchical file."""
         indent = "    " * depth  # Indent based on depth
         with open(filename, "a", encoding="utf-8") as file:
             file.write(f"{indent}{url}\n")
 
-    def crawl(self, url, depth=0, log_file="crawling_progress.txt"):
+    def crawl(self, url, depth=0, log_file="myfile.txt"):
         """Recursively crawl a URL to the specified depth."""
         if depth > self.max_depth or url in self.visited:
             logging.info(f"Skipping URL (Depth {depth}): {url}")
@@ -144,9 +144,6 @@ class WebCrawler:
         if not html:
             return
         
-        if depth + 1 > self.max_depth:  # Avoid making calculations for depths were never going to visit
-            return
-
         relevance_score = self.calculate_relevance(html, self.target_word)
         links = self.parse_links(html, url, 20)
         cleaned_links = clean_words(links)
@@ -162,6 +159,9 @@ class WebCrawler:
         self.crawled_data.append(entry)
         self.log_progress(url, depth, log_file)
 
+        if depth + 1 > self.max_depth:  # Avoid making calculations for depths were never going to visit
+            return
+        
         # Use ThreadPoolExecutor for limited workers
         MAX_WORKERS = 5  # Limit the number of processes
         tasks = [(item, self.target_word) for item in cleaned_links]
@@ -186,7 +186,7 @@ class WebCrawler:
             logging.info(f"{score} Next target: {next_url}")
             self.crawl(next_url, depth + 1, log_file)
 
-    def start(self, log_file="crawling_progress.txt"):
+    def start(self, log_file="myfile.txt"):
         """Start the crawling process."""
         with open(log_file, "w", encoding="utf-8") as file:
             file.write("Starting Web Crawler...\n")
@@ -195,7 +195,7 @@ class WebCrawler:
 
 
 @app.task(name="crawler.crawl_url")
-def celery_crawl_url(seed_url, target_word, max_depth=2, max_horizon=100, log_file="crawling_progress.txt"):
+def celery_crawl_url(seed_url, target_word, max_depth=2, max_horizon=100, log_file="myfile.txt"):
     """Wrap the WebCrawler logic for distributed tasks."""
     crawler = WebCrawler([seed_url], target_word, max_depth, max_horizon)
     crawler.start(log_file=log_file)
