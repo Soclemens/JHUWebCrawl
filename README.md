@@ -8,10 +8,6 @@ Program setup:
 4. To set up the dependencies, run: $ pip install -e .
 5. To run the program (root directory): $ python -m src.crawler.crawler
 
-
-
-
-
 # Web Crawler with Distributed Task Management
 
 ## Overview

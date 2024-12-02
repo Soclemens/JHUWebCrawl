@@ -143,8 +143,12 @@ class WebCrawler:
         html = self.fetch_page(url)
         if not html:
             return
+        
+        if depth + 1 > self.max_depth:  # Avoid making calculations for depths were never going to visit
+            return
+
         relevance_score = self.calculate_relevance(html, self.target_word)
-        links = self.parse_links(html, url)
+        links = self.parse_links(html, url, 20)
         cleaned_links = clean_words(links)
 
         # Save the crawl results
@@ -259,7 +263,7 @@ def stop_all_workers(workers):
     logging.info("All workers have been stopped.")
 
 if __name__ == "__main__":
-    seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler", "https://www.example.com"]
+    seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler", "https://www.techtarget.com/whatis/definition/crawler"]
     target_word = "crawler"
     max_depth = 3
     max_horizon = 5
