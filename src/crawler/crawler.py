@@ -135,8 +135,11 @@ class WebCrawler:
 
     def crawl(self, url, depth=0, log_file="myfile.txt"):
         """Recursively crawl a URL to the specified depth."""
-        if depth > self.max_depth or url in self.visited:
-            logging.info(f"Skipping URL (Depth {depth}): {url}")
+        if depth > self.max_depth:
+            logging.info(f"Skipping URL (Depth {depth}): {url} - max depth reached")
+            return
+        if url in self.visited:
+            logging.info(f"Skipping URL (Depth {depth}): {url} - Already visited")
             return
         
         if not self.validate_url(url):
@@ -148,6 +151,7 @@ class WebCrawler:
 
         html = self.fetch_page(url)
         if not html:
+            logging.warning(f"Skipping invalid URL during crawl: {url} - could not get HTML")
             return
         
         relevance_score = self.calculate_relevance(html, self.target_word)
@@ -166,6 +170,7 @@ class WebCrawler:
         self.log_progress(url, depth, log_file)
 
         if depth + 1 > self.max_depth:  # Avoid making calculations for depths were never going to visit
+            logging.warning(f"Skipping finding children of {url}")
             return
         
         # Use ThreadPoolExecutor for limited workers
@@ -188,9 +193,12 @@ class WebCrawler:
 
         # Recursively crawl the top URLs
         while len(horizon.get_top_values()) > 0:
+            logging.info(f"{url} current Horizon Size: {len(horizon.get_top_values())}")
             score, next_url = horizon.pop_highest()
             logging.info(f"{score} Next target: {next_url}")
             self.crawl(next_url, depth + 1, log_file)
+        
+        return
 
     def start(self, log_file="myfile.txt"):
         """Start the crawling process."""
@@ -269,10 +277,10 @@ def stop_all_workers(workers):
     logging.info("All workers have been stopped.")
 
 if __name__ == "__main__":
-    seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler", "https://www.techtarget.com/whatis/definition/crawler"]
+    seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler"]
     target_word = "crawler"
-    max_depth = 1
-    max_horizon = 2
+    max_depth = 2
+    max_horizon = 4
     log_file = "myfile.txt"
 
     # Purge Celery queue and backend before starting
