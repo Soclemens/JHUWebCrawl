@@ -4,13 +4,11 @@ import sys
 import time
 from subprocess import Popen
 from celery import Celery, group
-from celery import revoke
-from src.models.similarities import calculate_similarities, clean_words
-from src.models.topVals import TopValues
+from models.similarities import calculate_similarities, clean_words
+from models.topVals import TopValues
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Pool
 import logging
 
@@ -92,7 +90,7 @@ class WebCrawler:
                 except AttributeError:
                     preceding_text = ""
                 try:
-                    following_text = link.find_next(string=True)
+                    following_text = link.find_next(string=True).find_next(string=True)
                 except AttributeError:
                     following_text = ""
 
@@ -246,7 +244,7 @@ def terminate_all_tasks():
                 for task in tasks:
                     task_id = task['id']
                     logging.info(f"Revoking task {task_id} on worker {worker}")
-                    revoke(task_id, terminate=True)
+                    app.control.revoke(task_id, terminate=True)
         logging.info("All active tasks have been terminated.")
     except Exception as e:
         logging.error(f"Error during task termination: {e}")
