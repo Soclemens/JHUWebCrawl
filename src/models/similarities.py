@@ -13,6 +13,27 @@ def get_spacy_model(model_name="en_core_web_md"):
         print(f"Error loading SpaCy model '{model_name}': {e}")
         raise
 
+def clean_html(group, keyWord):
+    nlp = get_spacy_model('en_core_web_md')
+
+    cleaner = Cleaner(
+        nlp,
+        processing.remove_stopword_token,
+        processing.remove_punctuation_token,
+        processing.remove_email_token,
+        processing.replace_email_token,
+        processing.replace_url_token,
+        processing.mutate_lemma_token,
+    )
+
+    words = cleaner.clean([t for t in group if len(t) > 1])
+    base_token = nlp(keyWord)
+    doc = nlp(" ".join(words))
+    to_return = []
+    for token in doc:
+        if token and token.vector_norm:
+            to_return.append(base_token.similarity(token))
+    return to_return
 def clean_words(group):
     if not group or not isinstance(group, list):
         print("Invalid input to clean_words: Expected a list of tuples.")

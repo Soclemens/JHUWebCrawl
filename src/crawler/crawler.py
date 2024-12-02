@@ -4,11 +4,12 @@ import sys
 import time
 from subprocess import Popen
 from celery import Celery, group
-from models.similarities import calculate_similarities, clean_words
+from models.similarities import calculate_similarities, clean_words, clean_html
 from models.topVals import TopValues
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
+from bs4.element import Comment
 from multiprocessing import Pool
 import logging
 
@@ -119,7 +120,12 @@ class WebCrawler:
 
     def calculate_relevance(self, content, keyword):
         """Calculate relevance of page content to a keyword."""
-        return content.lower().count(keyword.lower()) / max(len(content.split()), 1)
+        soup = BeautifulSoup(content, 'html.parser')
+        human_readable_text = soup.get_text()
+
+        scores = clean_html(human_readable_text.split(), keyword)
+        average = sum(scores) / len(scores)
+        return average
 
     def log_progress(self, url, depth, filename="myfile.txt"):
         """Write progress updates to a hierarchical file."""
@@ -163,7 +169,7 @@ class WebCrawler:
             return
         
         # Use ThreadPoolExecutor for limited workers
-        MAX_WORKERS = 5  # Limit the number of processes
+        MAX_WORKERS = 10  # Limit the number of processes
         tasks = [(item, self.target_word) for item in cleaned_links]
 
         # Define the Pool with MAX_WORKERS
@@ -265,8 +271,8 @@ def stop_all_workers(workers):
 if __name__ == "__main__":
     seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler", "https://www.techtarget.com/whatis/definition/crawler"]
     target_word = "crawler"
-    max_depth = 3
-    max_horizon = 5
+    max_depth = 1
+    max_horizon = 2
     log_file = "myfile.txt"
 
     # Purge Celery queue and backend before starting
