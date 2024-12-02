@@ -263,7 +263,7 @@ if __name__ == "__main__":
     target_word = "crawler"
     max_depth = 3
     max_horizon = 5
-    log_file = "crawling_progress.txt"
+    log_file = "myfile.txt"
 
     # Purge Celery queue and backend before starting
     purge_backend_and_queue()
