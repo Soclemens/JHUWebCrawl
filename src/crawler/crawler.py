@@ -1,4 +1,5 @@
 import csv
+import time
 import os
 import sys
 import time
@@ -39,16 +40,18 @@ def initialize_database():
                         depth INTEGER NOT NULL,
                         links_found INTEGER NOT NULL,
                         relevance_score REAL NOT NULL,
-                        context_snippet TEXT NOT NULL
+                        context_snippet TEXT NOT NULL,
+                        duration_sec REAL NOT NULL
                       )''')
     conn.commit()
     conn.close()
 
-def insert_crawl_result(url, depth, links_found, relevance_score, context_snippet):
+
+def insert_crawl_result(url, depth, links_found, relevance_score, context_snippet, duration_sec):
     conn = sqlite3.connect("results.sqlite3")
     cursor = conn.cursor()
-    cursor.execute('''INSERT INTO CrawlResults (url, depth, links_found, relevance_score, context_snippet)
-                      VALUES (?, ?, ?, ?, ?)''', (url, depth, links_found, relevance_score, context_snippet))
+    cursor.execute('''INSERT INTO CrawlResults (url, depth, links_found, relevance_score, context_snippet, duration_sec)
+                      VALUES (?, ?, ?, ?, ?, ?)''', (url, depth, links_found, relevance_score, context_snippet, duration_sec))
     conn.commit()
     conn.close()
 
@@ -159,6 +162,8 @@ class WebCrawler:
 
     def crawl(self, url, depth=0, log_file="myfile.txt"):
         """Recursively crawl a URL to the specified depth."""
+        start_time = time.time() 
+
         if depth > self.max_depth or url in self.visited:
             logging.info(f"Skipping URL (Depth {depth}): {url}")
             return
@@ -179,15 +184,8 @@ class WebCrawler:
         cleaned_links = clean_words(links)
 
         # Save the crawl results
-        entry = {
-            "url": url,
-            "depth": depth,
-            "links_found": len(cleaned_links),
-            "relevance_score": round(relevance_score, 4),
-            "context_snippet": "; ".join(snippet for _, snippet in cleaned_links)
-        }
-
-        insert_crawl_result(url, depth, len(cleaned_links), round(relevance_score,4), "; ".join(snippet for _, snippet in cleaned_links))
+        duration_sec = time.time() - start_time
+        insert_crawl_result(url, depth, len(cleaned_links), round(relevance_score,4), "; ".join(snippet for _, snippet in cleaned_links), duration_sec)
         
         #self.crawled_data.append(entry)
         self.log_progress(url, depth, log_file)
