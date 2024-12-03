@@ -162,3 +162,5 @@ cython_debug/
 #.idea/
 
 myfile.txt
+results.sqlite3
+crawled_report.csv

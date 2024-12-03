@@ -14,6 +14,8 @@ from bs4 import BeautifulSoup
 from bs4.element import Comment
 from multiprocessing import Pool
 import logging
+from robotexclusionrulesparser import RobotExclusionRulesParser
+
 
 # Configure Celery with RabbitMQ as broker and SQLite as backend
 app = Celery(
@@ -22,10 +24,17 @@ app = Celery(
     backend="db+sqlite:///results.sqlite3"
 )
 
+# Tell Celery not to hijack the root logger
+app.conf.update(
+    worker_hijack_root_logger=False,
+    # Optionally, prevent Celery from redirecting stdout and stderr
+    worker_redirect_stdouts=False,
+)
+
 # Logging configuration
 logging.basicConfig(
     filename="crawler.log",
-    filemode="w",
+    filemode="a",
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
@@ -88,14 +97,75 @@ class WebCrawler:
         self.visited = set()  # Keep track of visited URLs
         self.max_depth = max_depth
         self.user_agent = user_agent
+        self.robots_cache = {}  # Cache for robots parsers per domain
+        self.last_access_times = {}  # For rate limiting per domain
+        self.default_delay = 1  # Default delay in seconds
         self.crawled_data = []  # Store results for reporting
+
+    def get_robot_parser(self, base_url):
+        """Get or fetch the Robots parser for a given base URL."""
+        if base_url in self.robots_cache:
+            return self.robots_cache[base_url]
+        else:
+            robots_url = f"{base_url}/robots.txt"
+            parser = RobotExclusionRulesParser()
+            try:
+                response = requests.get(robots_url, headers={"User-Agent": self.user_agent}, timeout=5)
+                if response.status_code == 200:
+                    parser.parse(response.text)
+                else:
+                    # Default to allowing all if robots.txt not found
+                    parser.parse('')
+                self.robots_cache[base_url] = parser
+                return parser
+            except requests.RequestException as e:
+                logging.error(f"Failed to fetch robots.txt from {robots_url}: {e}")
+                # Default to allowing all if there's a network error
+                parser.parse('')
+                self.robots_cache[base_url] = parser
+                return parser
 
     def fetch_page(self, url):
         """Fetch the HTML content of a page."""
         try:
+            # Parse the base URL
+            parsed_url = urlparse(url)
+            base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+            # Get the Robots parser
+            parser = self.get_robot_parser(base_url)
+
+            # Check robots.txt compliance
+            if not parser.is_allowed(self.user_agent, url):
+                logging.info(f"Disallowed by robots.txt: {url}")
+                return None
+
+            # Implement rate limiting based on Crawl-delay
+            now = time.time()
+            last_access = self.last_access_times.get(base_url, 0)
+            crawl_delay = parser.get_crawl_delay(self.user_agent)
+            if crawl_delay is not None:
+                delay = crawl_delay
+            else:
+                delay = self.default_delay  # Use default if Crawl-delay not specified
+
+            elapsed = now - last_access
+            logging.info(f"Elapsed time since last access to {base_url}: {elapsed:.2f} seconds; required delay: {delay} seconds")
+
+            if elapsed < delay:
+                sleep_time = delay - elapsed
+                logging.info(f"Rate limiting {base_url}: sleeping for {sleep_time} seconds")
+                time.sleep(sleep_time)
+
+            # Update last access time
+            self.last_access_times[base_url] = time.time()
+
+            # Fetch the page
             response = requests.get(url, headers={"User-Agent": self.user_agent}, timeout=10)
             if response.status_code == 200:
                 return response.text
+            else:
+                logging.warning(f"Non-200 status code {response.status_code} for URL: {url}")
         except requests.RequestException as e:
             logging.error(f"Failed to fetch {url}: {e}")
         return None
@@ -306,7 +376,7 @@ def stop_all_workers(workers):
     logging.info("All workers have been stopped.")
 
 if __name__ == "__main__":
-    seed_urls = ["https://en.wikipedia.org/wiki/Web_crawler"]
+    seed_urls = ["https://en.wikipedia.org/wiki/Special:Random"]
     target_word = "crawler"
     max_depth = 2
     max_horizon = 4
